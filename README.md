@@ -20,7 +20,7 @@ aws cloudformation create-stack --stack-name udacity-proj2-net --template-body f
 
 2. When first is complete, start server/service stack:
 ```
-aws cloudformation create-stack --stack-name udacity-proj2-server --template-body file://2-infra-servers.yaml --parameters file://2-infra-servers-params.json --region=us-west-2
+aws cloudformation create-stack --stack-name udacity-proj2-server --template-body file://2-infra-servers.yaml --parameters file://2-infra-servers-params.json --region=us-west-2 --capabilities CAPABILITY_NAMED_IAM
 ```
 
 ## Output

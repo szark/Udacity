@@ -1,5 +1,15 @@
 Description: >
-    Lukasz Starsiak - Udacity project 2
+    Udacity project 2 - Highly scalable website
+
+    Networking
+
+    Create a Launch Configuration for appllication servers in order to deploy 4 servers,
+    two located in each of your private subnets. The launch configuration will be used
+    by an autoscaling group.
+    You will need 2 vCPUs and at least 4GB of RAM. The Operating system is Ubuntu 18, 
+    so Machine Image (AMI) should best fit for purpose. An extra 10 GB disk space to be
+    allocated.
+
 Parameters:
 
   EnvironmentName:
@@ -32,6 +42,8 @@ Parameters:
     Default: 10.10.3.0/24
 
 Resources:
+
+  # Created new VPC
   VPC: 
     Type: AWS::EC2::VPC
     Properties:
@@ -40,20 +52,23 @@ Resources:
       Tags: 
         - Key: Name 
           Value: !Ref EnvironmentName
-            
+
+  # Internet gateway for external communication   
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
           Value: !Ref EnvironmentName
-            
+
+  # Attach the gateway to VPC  
   InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       InternetGatewayId: !Ref InternetGateway
       VpcId: !Ref VPC
 
+  # Create Public Subnet in AZ1
   PublicSubnet1: 
     Type: AWS::EC2::Subnet
     Properties:
@@ -65,6 +80,7 @@ Resources:
         - Key: Name 
           Value: !Sub ${EnvironmentName} Public Subnet (AZ1)
 
+  # Create Public Subnet in AZ2
   PublicSubnet2: 
     Type: AWS::EC2::Subnet
     Properties:
@@ -76,6 +92,7 @@ Resources:
         - Key: Name 
           Value: !Sub ${EnvironmentName} Public Subnet (AZ2)
 
+  # Create Private Subnet in AZ1
   PrivateSubnet1: 
     Type: AWS::EC2::Subnet
     Properties:
@@ -87,6 +104,7 @@ Resources:
         - Key: Name 
           Value: !Sub ${EnvironmentName} Private Subnet (AZ1)
 
+  # Create Private Subnet in AZ2
   PrivateSubnet2: 
     Type: AWS::EC2::Subnet
     Properties:
@@ -98,30 +116,35 @@ Resources:
         - Key: Name 
           Value: !Sub ${EnvironmentName} Private Subnet (AZ2)
 
+  # NAT Gateway Public IP 1
   NatGateway1EIP:
     Type: AWS::EC2::EIP
     DependsOn: InternetGatewayAttachment
     Properties: 
       Domain: vpc
 
+  # NAT Gateway Public IP 2
   NatGateway2EIP:
     Type: AWS::EC2::EIP
     DependsOn: InternetGatewayAttachment
     Properties:
       Domain: vpc
 
+  # Create NAT Gateway and place in Public Subnet 1
   NatGateway1: 
     Type: AWS::EC2::NatGateway
     Properties: 
       AllocationId: !GetAtt NatGateway1EIP.AllocationId
       SubnetId: !Ref PublicSubnet1
 
+  # Create NAT Gateway and Place in Public Subnet 2
   NatGateway2: 
     Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !GetAtt NatGateway2EIP.AllocationId
       SubnetId: !Ref PublicSubnet2
 
+  # Create publick route table
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties: 
@@ -130,6 +153,7 @@ Resources:
         - Key: Name 
           Value: !Sub ${EnvironmentName} Public Routes
 
+  # Define publick traffic via Internet Gateway
   DefaultPublicRoute: 
     Type: AWS::EC2::Route
     DependsOn: InternetGatewayAttachment
@@ -138,19 +162,21 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
 
+  # Associate public route table to Public Subnet 1
   PublicSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet1
 
+  # Associate public route table to Public Subnet 2
   PublicSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet2
   
-
+  # Create Private route table for AZ1
   PrivateRouteTable1:
     Type: AWS::EC2::RouteTable
     Properties: 
@@ -159,6 +185,7 @@ Resources:
         - Key: Name 
           Value: !Sub ${EnvironmentName} Private Routes (AZ1)
 
+  # Define default route via Nat Gateway 1
   DefaultPrivateRoute1:
     Type: AWS::EC2::Route
     Properties:
@@ -166,12 +193,14 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId: !Ref NatGateway1
 
+  # Associate private route to Private Subnet 1
   PrivateSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateRouteTable1
       SubnetId: !Ref PrivateSubnet1
 
+  # Create Private route table for AZ1
   PrivateRouteTable2:
     Type: AWS::EC2::RouteTable
     Properties: 
@@ -180,6 +209,7 @@ Resources:
         - Key: Name 
           Value: !Sub ${EnvironmentName} Private Routes (AZ2)
 
+  # Define default route via Nat Gateway 2
   DefaultPrivateRoute2:
     Type: AWS::EC2::Route
     Properties:
@@ -187,6 +217,7 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId: !Ref NatGateway2
 
+  # Associate private route to Private Subnet 1
   PrivateSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:

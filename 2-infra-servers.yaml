@@ -1,12 +1,49 @@
 Description: >
-    Lukasz Starsiak - Udacity project 2
+    Udacity project 2 - Highly scalable website
+
+    Servers and services.
+
+    Create a Launch Configuration for appllication servers in order to deploy 4 servers,
+    two located in each of your private subnets. The launch configuration will be used
+    by an autoscaling group.
+    You will need 2 vCPUs and at least 4GB of RAM. The Operating system is Ubuntu 18, 
+    so Machine Image (AMI) should best fit for purpose. An extra 10 GB disk space to be
+    allocated.
+
 Parameters:
 
   EnvironmentName:
     Description: An environment name that will be prefixed to resource names
     Type: String
 
+  ServerImageID:
+    Description: Image ID of the web server
+    Type: String
+    Default: ami-0cc158853935719b7
+
+  ServerInstanceType:
+    Description: Type of the server's instance
+    Type: String
+    Default: t3.medium
+  
+  ServerVolumeSize:
+    Description: Size of additional volume size
+    Type: String
+    Default: 10
+  
+  CpuUsageTargetValue:
+    Description: Target value of Cpu usage, based on which Auto Scaling triggers action
+    Type: String
+    Default: 80.0
+
+  RequestsTargetValue:
+    Description: How many requests can application hadle per each instance
+    Type: String
+    Default: 1
+
 Resources:
+
+  # Web server role, which allows to access S3 storage
   UdacityS3ReadOnlyEC2:
     Type: AWS::IAM::Role
     Properties:
@@ -22,12 +59,16 @@ Resources:
             Action:
               - 'sts:AssumeRole'
       Path: "/"
+
+  # Instance profile is a container for IAM role. It attaches IAM role to an instance
   ProfileWithRolesForOurApp:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Path: "/"
       Roles:
         - !Ref UdacityS3ReadOnlyEC2
+
+  # A security group for Load Balancer, which allows incoming and outgoing HTTP traffic
   LBSecGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -45,6 +86,9 @@ Resources:
         FromPort: 80
         ToPort: 80
         CidrIp: 0.0.0.0/0
+
+  # A security Group for Web servers. It allows incoming HTTP traffic only
+  # and outgoing Full access (i.e. to allow download of packages and patches)
   WebServerSecGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -62,6 +106,9 @@ Resources:
         FromPort: 0
         ToPort: 65535
         CidrIp: 0.0.0.0/0
+
+  # The Launch Configuration specififies Auto Scaling Launch Configuration
+  # That one is being used by Auto Scaling group to configure EC2 Instances
   WebAppLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
@@ -76,15 +123,17 @@ Resources:
           cd /var/www/html
           aws s3 cp s3://udacity-demo-1/udacity.zip .
           unzip -o udacity.zip
-      ImageId: ami-0cc158853935719b7
+      ImageId: !Ref ServerImageID
       IamInstanceProfile: !Ref ProfileWithRolesForOurApp
       SecurityGroups:
       - Ref: WebServerSecGroup
-      InstanceType: t3.medium
+      InstanceType: !Ref ServerInstanceType
       BlockDeviceMappings:
       - DeviceName: "/dev/sdk"
         Ebs:
-          VolumeSize: '10'
+          VolumeSize: !Ref ServerVolumeSize
+
+  # Auto Scaling group params
   WebAppGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
@@ -97,6 +146,34 @@ Resources:
       MaxSize: '4'
       TargetGroupARNs:
       - Ref: WebAppTargetGroup
+
+  # CPU based auto scaling policy
+  WebAppCpuScaling:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref WebAppGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: !Ref CpuUsageTargetValue
+
+  # Requests Based scaling policy
+  WebAppRequestScaling:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref WebAppGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ALBRequestCountPerTarget
+          ResourceLabel: !Join
+            - '/'
+            - - !GetAtt WebAppLB.LoadBalancerFullName
+              - !GetAtt WebAppTargetGroup.TargetGroupFullName
+        TargetValue: !Ref RequestsTargetValue
+          
+  # Specifies Load Balancer
   WebAppLB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
@@ -105,6 +182,8 @@ Resources:
       - Fn::ImportValue: !Sub "${EnvironmentName}-PUB2-SN"
       SecurityGroups:
       - Ref: LBSecGroup
+
+  # Specifies listener for load balancer and which ports and protocols does it use
   Listener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
@@ -116,6 +195,8 @@ Resources:
         Ref: WebAppLB
       Port: '80'
       Protocol: HTTP
+
+  # Specifies behavior of listener
   ALBListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
@@ -127,6 +208,8 @@ Resources:
         Values: [/]
       ListenerArn: !Ref 'Listener'
       Priority: 1
+
+  # Specifies parameters based on which Target Group is assessed as healthy or not
   WebAppTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:

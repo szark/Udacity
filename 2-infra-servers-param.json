@@ -2,5 +2,25 @@
 	{
 		"ParameterKey": "EnvironmentName",
 		"ParameterValue": "UdacityProject2"
+	},
+	{
+		"ParameterKey": "ServerImageID",
+		"ParameterValue": "ami-0cc158853935719b7"
+	},
+	{
+		"ParameterKey": "ServerInstanceType",
+		"ParameterValue": "t3.medium"
+	},
+	{
+		"ParameterKey": "ServerVolumeSize",
+		"ParameterValue": "10"
+	},
+	{
+		"ParameterKey": "CpuUsageTargetValue",
+		"ParameterValue": "80.0"
+	},
+	{
+		"ParameterKey": "RequestsTargetValue",
+		"ParameterValue": "1"
 	}
 ]

@@ -24,5 +24,5 @@ aws cloudformation create-stack --stack-name udacity-proj2-server --template-bod
 ```
 
 ## Output
-Server/service stack outputs Web Page URL.
+Server/service stack outputs [Web Page URL](http://udaci-WebAp-Y24NBQX2UV9J-230869623.us-west-2.elb.amazonaws.com).
 

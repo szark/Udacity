@@ -15,7 +15,7 @@ The purpose of that project was to create Cloudformation scripts to deploy a Web
 ## Execute the project
 1. Start network stack:
 ```
-aws cloudformation create-stack --stack-name udacity-proj2-net --template-body file://1-infra-net.yaml --parameters file://1-infra-net-params.yaml --region=us-west-2
+aws cloudformation create-stack --stack-name udacity-proj2-net --template-body file://1-infra-net.yaml --parameters file://1-infra-net-params.json --region=us-west-2
 ```
 
 2. When first is complete, start server/service stack:

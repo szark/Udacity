@@ -1,7 +1,6 @@
 provider "aws" {
     region = "us-west-2"
 }
-
 resource "aws_vpc" "mydemo" {
     cidr_block          = "10.1.0.0/16"
     tags = {
@@ -115,6 +114,11 @@ resource "aws_route_table" "priv_route_table1" {
     ]
 }
 
+resource "aws_route_table_association" "assoc_priv1" {
+    subnet_id       = aws_subnet.private_cidr1.id 
+    route_table_id  = aws_route_table.priv_route_table1.id 
+}
+
 resource "aws_route_table" "priv_route_table2" {
     vpc_id = aws_vpc.mydemo.id 
 
@@ -136,4 +140,9 @@ resource "aws_route_table" "priv_route_table2" {
         },
 
     ]
+}
+
+resource "aws_route_table_association" "assoc_priv2" {
+    subnet_id       = aws_subnet.private_cidr2.id 
+    route_table_id  = aws_route_table.priv_route_table2.id 
 }

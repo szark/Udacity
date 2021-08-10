@@ -2,22 +2,25 @@ provider "aws" {
     region = "us-west-2"
 }
 resource "aws_vpc" "mydemo" {
-    cidr_block          = "10.1.0.0/16"
+    cidr_block              = "10.1.0.0/16"
+    enable_dns_hostnames    = true
     tags = {
         Name = "mydemo"
     }
 }
 
 resource "aws_subnet" "public_cidr1" {
-    vpc_id              = aws_vpc.mydemo.id
-    availability_zone   = "us-west-2a"
-    cidr_block          = "10.1.1.0/24"
+    vpc_id                  = aws_vpc.mydemo.id
+    availability_zone       = "us-west-2a"
+    cidr_block              = "10.1.1.0/24"
+    map_public_ip_on_launch = true
 }
 
 resource "aws_subnet" "public_cidr2" {
-    vpc_id              = aws_vpc.mydemo.id
-    availability_zone   = "us-west-2b"
-    cidr_block          = "10.1.2.0/24"
+    vpc_id                  = aws_vpc.mydemo.id
+    availability_zone       = "us-west-2b"
+    cidr_block              = "10.1.2.0/24"
+    map_public_ip_on_launch = true
 }
 
 resource "aws_subnet" "private_cidr1" {
@@ -51,11 +54,17 @@ resource "aws_nat_gateway" "ngw2" {
 }
 
 resource "aws_eip" "eip1" {
-    vpc = true
+    vpc         = true
+    depends_on  = [
+      aws_internet_gateway.internet_gw
+    ]
 }
 
 resource "aws_eip" "eip2" {
-    vpc = true
+    vpc             = true
+        depends_on  = [
+      aws_internet_gateway.internet_gw
+    ]
 }
 
 resource "aws_route_table" "pub_route_table" {
@@ -78,6 +87,9 @@ resource "aws_route_table" "pub_route_table" {
             local_gateway_id            = ""
         },
 
+    ]
+    depends_on  = [
+      aws_internet_gateway.internet_gw
     ]
 }
 
